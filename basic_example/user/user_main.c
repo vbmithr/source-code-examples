@@ -1,42 +1,45 @@
-#include "ets_sys.h"
-#include "osapi.h"
-#include "gpio.h"
-#include "os_type.h"
-#include "user_config.h"
-#include "user_interface.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#define user_procTaskPrio        0
-#define user_procTaskQueueLen    1
-os_event_t    user_procTaskQueue[user_procTaskQueueLen];
-static void loop(os_event_t *events);
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <espressif/esp_wifi.h>
+#include <espressif/esp_sta.h>
 
-//Main code function
-static void ICACHE_FLASH_ATTR
-loop(os_event_t *events)
+#include "uart.h"
+
+#define SSID "samarcande"
+#define SSID_PASSWORD "fr4b4t043v3r=="
+
+#define DEFAULT_PRIO 2
+#define ICACHE_FLASH_ATTR __attribute__((section(".irom0.text")))
+
+static void ICACHE_FLASH_ATTR setup_ap(void *pvParams)
 {
-    os_printf("Hello\n\r");
-    os_delay_us(10000);
-    system_os_post(user_procTaskPrio, 0, 0 );
-}
-
-//Init function 
-void ICACHE_FLASH_ATTR
-user_init()
-{
-    char ssid[32] = SSID;
-    char password[64] = SSID_PASSWORD;
     struct station_config stationConf;
+    memset(&stationConf, 0, sizeof(struct station_config));
 
-    //Set station mode
-    wifi_set_opmode( 0x1 );
+    /* Set station mode */
+    wifi_set_opmode(STATION_MODE);
 
-    //Set ap settings
-    os_memcpy(&stationConf.ssid, ssid, 32);
-    os_memcpy(&stationConf.password, password, 64);
+    /* Set ap settings */
+    strncpy(stationConf.ssid, SSID, 32);
+    strncpy(stationConf.password, SSID_PASSWORD, 64);
     wifi_station_set_config(&stationConf);
 
-    //Start os task
-    system_os_task(loop, user_procTaskPrio,user_procTaskQueue, user_procTaskQueueLen);
+    vTaskDelete(NULL);
+}
 
-    system_os_post(user_procTaskPrio, 0, 0 );
+/* Init function */
+void ICACHE_FLASH_ATTR user_init()
+{
+    uart_init_new();
+
+    xTaskHandle task;
+
+    printf("Booting.\n");
+
+    /* Create task */
+    xTaskCreate(setup_ap, "setup_ap", 512, NULL, DEFAULT_PRIO, &task);
 }

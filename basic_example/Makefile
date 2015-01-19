@@ -35,10 +35,10 @@ MODULES		= driver user
 EXTRA_INCDIR    = include
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= c gcc hal pp phy net80211 lwip wpa main
+LIBS		= c gcc hal pp phy net80211 lwip wpa main freertos ssl udhcp
 
 # compiler flags using during compilation of source files
-CFLAGS		= -Os -g -O2 -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH
+CFLAGS		= -Os -g -O2 -Wall -Werror -Wno-error=unused-function -Wpointer-arith -Wundef -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH
 
 # linker flags used to generate the main object file
 LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
@@ -49,7 +49,7 @@ LD_SCRIPT	= eagle.app.v6.ld
 # various paths from the SDK used in this project
 SDK_LIBDIR	= lib
 SDK_LDDIR	= ld
-SDK_INCDIR	= include include/json
+SDK_INCDIR	= include extra_include include/lwip
 
 # we create two different files for uploading into the flash
 # these are the names and options to generate them
@@ -127,6 +127,12 @@ $(BUILD_DIR):
 
 $(FW_BASE):
 	$(Q) mkdir -p $@
+
+flash1: $(FW_FILE_1)
+	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FILE_1_ADDR) $(FW_FILE_1)
+
+flash2: $(FW_FILE_2)
+	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FILE_2_ADDR) $(FW_FILE_2)
 
 flash: $(FW_FILE_1) $(FW_FILE_2)
 	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FILE_1_ADDR) $(FW_FILE_1) $(FW_FILE_2_ADDR) $(FW_FILE_2)

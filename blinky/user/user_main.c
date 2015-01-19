@@ -15,15 +15,15 @@ static volatile os_timer_t some_timer;
 void some_timerfunc(void *arg)
 {
     //Do blinky stuff
-    if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & BIT2)
+    if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & BIT4)
     {
         //Set GPIO2 to LOW
-        gpio_output_set(0, BIT2, BIT2, 0);
+        gpio_output_set(0, BIT4, BIT4, 0);
     }
     else
     {
         //Set GPIO2 to HIGH
-        gpio_output_set(BIT2, 0, BIT2, 0);
+        gpio_output_set(BIT4, 0, BIT4, 0);
     }
 }
 
@@ -45,7 +45,7 @@ user_init()
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
 
     //Set GPIO2 low
-    gpio_output_set(0, BIT2, BIT2, 0);
+    gpio_output_set(0, BIT4, BIT4, 0);
 
     //Disarm timer
     os_timer_disarm(&some_timer);
