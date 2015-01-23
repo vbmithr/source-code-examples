@@ -29,45 +29,33 @@ typedef struct _os_event_ {
     uint32_t param;
 } os_event_t;
 
-xTaskHandle xUartTaskHandle;
 xQueueHandle xQueueUart;
 
-static void
-uart_tx_one_char(UART_Port uart, char TxChar)
+static void ICACHE_FLASH_ATTR
+uart_tx_one_char(UART_Port u, char c)
 {
-    while (1) {
-        uint32_t fifo_cnt = READ_PERI_REG(UART_STATUS(uart)) & (UART_TXFIFO_CNT << UART_TXFIFO_CNT_S);
-
-        if ((fifo_cnt >> UART_TXFIFO_CNT_S & UART_TXFIFO_CNT) < 126) {
-            break;
-        }
-    }
-
-    WRITE_PERI_REG(UART_FIFO(uart) , TxChar);
+    /* Wait until there is room in the FIFO */
+    while (((READ_PERI_REG(UART_STATUS(u)) >> UART_TXFIFO_CNT_S) & UART_TXFIFO_CNT) >= 126) ;
+    /* Send the character */
+    WRITE_PERI_REG(UART_FIFO(u), c);
 }
 
-static void
-uart1_write_char(char c)
+static void ICACHE_FLASH_ATTR
+uart_write_char(UART_Port u, char c)
 {
-    if (c == '\n') {
-        uart_tx_one_char(UART1, '\r');
-        uart_tx_one_char(UART1, '\n');
-    } else if (c == '\r') {
-    } else {
-        uart_tx_one_char(UART1, c);
-    }
+    /* convert \n -> \r\n */
+    if (c=='\n') uart_tx_one_char(u, '\r');
+    uart_tx_one_char(u, c);
 }
 
-static void
-uart0_write_char(char c)
+static void uart0_write_char(char c)
 {
-    if (c == '\n') {
-        uart_tx_one_char(UART0, '\r');
-        uart_tx_one_char(UART0, '\n');
-    } else if (c == '\r') {
-    } else {
-        uart_tx_one_char(UART0, c);
-    }
+    uart_write_char(UART0, c);
+}
+
+static void uart1_write_char(char c)
+{
+    uart_write_char(UART1, c);
 }
 
 static void
@@ -168,7 +156,7 @@ uart_init(void)
 
     UART_ConfigTypeDef uart;
 
-    uart.baut_rate    = BIT_RATE_74880;
+    uart.baut_rate    = BIT_RATE_115200;
     uart.data_bits    = UART_WordLength_8b;
     uart.flow_ctrl    = USART_HardwareFlowControl_None;
     // uart.exist_parity = PARITY_DIS;
@@ -178,13 +166,13 @@ uart_init(void)
     uart_config(UART0, &uart);
     uart_config(UART1, &uart);
 
-    os_install_putc1(uart1_write_char);
+    os_install_putc1(uart0_write_char);
 
     _xt_isr_unmask(1 << ETS_UART_INUM);
 
     xQueueUart = xQueueCreate(32, sizeof(os_event_t));
 
-    xTaskCreate(uart_task, (uint8 const *)"uTask", 512, NULL, tskIDLE_PRIORITY + 2, &xUartTaskHandle);
+    xTaskCreate(uart_task, (uint8 const *)"uTask", 512, NULL, tskIDLE_PRIORITY + 2, NULL);
 }
 #endif
 
